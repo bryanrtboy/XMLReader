@@ -23,6 +23,8 @@ public class ParticleController : MonoBehaviour
 
 	public TypeOfWeather m_weather = TypeOfWeather.Clear;
 
+
+	public bool m_testMode = false;
 	public ParticleSystem m_snow;
 	public ParticleSystem m_clouds;
 	public ParticleSystem m_haze;
@@ -31,12 +33,19 @@ public class ParticleController : MonoBehaviour
 
 	void OnEnable ()
 	{
+		if (m_testMode) {
+			ChangeWeather ();
+			return;
+		}
+
 		m_xmlReader.OnCurrentCondReceived += HandleCurrentConditions; //Set up handlers for the Events that occur when XMLReader gets a new forecast
 		m_xmlReader.OnForecastReceived += HandleForecast;
 	}
 
 	void OnDisable ()
 	{
+		if (m_testMode)
+			return;
 		m_xmlReader.OnCurrentCondReceived -= HandleCurrentConditions; //Clean up and shut down Event Handlers 
 		m_xmlReader.OnForecastReceived -= HandleForecast;
 	}
@@ -66,6 +75,12 @@ public class ParticleController : MonoBehaviour
 			m_weather = TypeOfWeather.Clear;
 		}
 
+		ChangeWeather ();
+
+	}
+
+	void ChangeWeather ()
+	{
 		switch (m_weather) {
 		case TypeOfWeather.Blizzard:
 			if (m_snow != null) {

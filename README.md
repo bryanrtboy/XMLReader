@@ -5,6 +5,8 @@ The current weather XML feed is very small and fast, so we simply have it run on
 
 To solve this, we open a new thread just for the XML reading. It is implemented as simply as possible, and for this use I have switched to the XDocument, which offers a bit more in the way of shortcuts for parsing XML.
 
+To use: Download as a .zip and open as a complete Unity project or import the XMLReader.unitypackage into your project
+
 MIT License
 
 Copyright (c) 2017 Bryan Leister
