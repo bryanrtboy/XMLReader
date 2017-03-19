@@ -25,6 +25,9 @@ namespace SimpleXML
 		public event Action<string,float> OnCurrentCondReceived;
 		public event Action<string,float> OnForecastReceived;
 
+		public float updateForecastRate = 3600;
+		public float updateCurrentConditionsRate = 120;
+
 		//other feeds to test -  http://feeds.foxnews.com/foxnews/national
 		//string m_forecastURL = "http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml";
 		string m_forecastURL = "http://forecast.weather.gov/MapClick.php?lat=39.7392&lon=-104.9903&unit=0&lg=english&FcstType=dwml";
@@ -32,36 +35,63 @@ namespace SimpleXML
 		string m_userAgent = "MyApplication/v1.0 (http://foo.com; foo@gmail.com)";
 
 		Thread m_thread;
-		XDocument xmlDoc;
+		XDocument xDoc;
+		XmlDocument xmlDoc;
 		bool runThread = true;
-		bool updateThread = false;
-		bool haveFreshData = false;
+		bool grabForecast = false;
+		bool grabCurrentConditions = false;
+		bool haveFreshForecast = false;
+		bool haveFreshCurrent = false;
+
+		float temp = -100f;
+		string weather = "";
 
 		void Start ()
 		{
-			InvokeRepeating ("GetCurrentConditions", 0, 15);//this runs on the main thread, which is fine since this feed is fast
-			InvokeRepeating ("GetForecast", 1, 36); //forecast only updates once per hour so use 3600 here. It will run on it's own thread as reading is slower...
+			Invoke ("StartThread", 3);
 		}
 
 		void Update ()
 		{
-			if (haveFreshData) { //Don't do anything unless the thread has refreshed the data
-				haveFreshData = false; //then we only run once
+//			if (haveFreshForecast) { //Don't do anything unless the thread has refreshed the data
+//				haveFreshForecast = false; //then we only run once
+//
+//				List<string> tempList = Temperatures (xDoc);
+//				List<string> condList = Conditions (xDoc);
+//
+//				if (tempList.Count > 0 && condList.Count > 0) {
+//					if (OnForecastReceived != null)
+//						OnForecastReceived (condList [0], Convert.ToSingle (tempList [0]));
+//				}
+//			}
 
-				List<string> tempList = Temperatures (xmlDoc);
-				List<string> condList = Conditions (xmlDoc);
+			if (haveFreshCurrent) { //Don't do anything unless the thread has refreshed the data
+				haveFreshCurrent = false; //then we only run once
 
-				if (tempList.Count > 0 && condList.Count > 0) {
-					if (OnForecastReceived != null)
-						OnForecastReceived (condList [0], Convert.ToSingle (tempList [0]));
-				}
+				if (OnCurrentCondReceived != null)
+					OnCurrentCondReceived (weather, temp);
+				
 			}
 		}
 
-		void OnEnable ()
+		void StartThread ()
 		{
-			m_thread = new Thread (ThreadUpdate); //starting the thread that reads forecasts, since it is slow...
+			m_thread = new Thread (ThreadUpdate); //starting the thread that reads forecasts, since it is a lot of text and slow to read in...
 			m_thread.Start (); //Thread runs all the time, but only does anything when updateThread = true;
+
+			Invoke ("StartGettingInfo", 1);
+
+		}
+
+		void StartGettingInfo ()
+		{
+			if (!m_thread.IsAlive) {
+				Debug.LogError ("No weather for you!");
+				return;
+			}
+			InvokeRepeating ("GetCurrentConditions", 0, updateCurrentConditionsRate);//this runs on the main thread, which is fine since this feed is fast
+			//InvokeRepeating ("GetForecast", 12, updateForecastRate); //forecast only updates once per hour so use 3600 here. It will run on it's own thread as reading is slower...
+
 		}
 
 		void OnDisable ()
@@ -83,16 +113,30 @@ namespace SimpleXML
 		void ThreadUpdate ()
 		{
 			while (runThread) {
-				if (updateThread) {
-					updateThread = false;
-					FetchForecastXDocument (m_forecastURL);
+				if (grabForecast) {
+					grabForecast = false;
+					//FetchXMLFeed (m_forecastURL);
+
+				}
+
+				if (grabCurrentConditions) {
+					grabCurrentConditions = false;
+					//FetchXMLFeed (m_currentWeatherURL);
+					GetTempAndConditions (m_forecastURL, "Daily Maximum Temperature", "Daily Maximum Temperature");
+					//GetTempAndConditions (m_currentWeatherURL, "weather", "temp_f");
+
 				}
 			}
 		}
 
 		void GetForecast ()
 		{
-			updateThread = true;
+			grabForecast = true;
+		}
+
+		void GetCurrentConditions ()
+		{
+			grabCurrentConditions = true;
 		}
 
 		List<string> Temperatures (XDocument xml)
@@ -115,17 +159,18 @@ namespace SimpleXML
 			
 		}
 
-		void FetchForecastXDocument (string url)
+		void FetchXMLFeed (string url)
 		{
-			xmlDoc = GetXDocument (url);
-			haveFreshData = true;
+			xDoc = GetXDocument (url);
+			Debug.Log (xDoc.ToString ());
+			haveFreshForecast = true;
 		}
+
+
 
 		XDocument  GetXDocument (string xmlURL)
 		{
 			XDocument doc = new XDocument ();
-			float elapsedTime = 0.0f;
-
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create (xmlURL);
 
 			request.Method = "GET";
@@ -145,34 +190,67 @@ namespace SimpleXML
 
 		#region Current Conditions using XmlDocument
 
-		void GetCurrentConditions ()
+		XmlDocument GetTempAndConditions (string xmlURL, string weatherName, string temperatureName)
 		{
-			XmlDocument doc = GetXMLDocument (m_currentWeatherURL);
+			XmlDocument doc = GetXMLDocument (xmlURL);
 
-			float temp = -100f;
-			string weather = "";
+			temp = -100f;
+			weather = "";
 
 			try {
 
 				XmlNodeList newList = doc.DocumentElement.ChildNodes;
 
+				Debug.Log ("Doc is " + doc.ChildNodes.Count);
+
 				foreach (XmlNode n in newList) {
-					Debug.Log (n.OuterXml);
 
-					if (n.Name == "weather")
+					if (n.HasChildNodes) {
+						XmlNodeList childList = n.ChildNodes;
+
+						foreach (XmlNode cn in childList) {
+							Debug.Log (cn.ChildNodes.Count + " children of " + cn.Name);
+							if (cn.Name == "parameters") {
+								
+								XmlNodeList parameterNodes = cn.ChildNodes;
+
+								foreach (XmlNode pm in parameterNodes) {
+									if (pm.Name == weatherName)
+										weather = pm.InnerText;
+									
+									Debug.Log (pm.ChildNodes.Count + " children of " + pm.Name);
+								}
+
+							}
+						}
+
+
+					}
+
+
+
+
+					//Debug.Log ("Got weather, it's child is " + n [weatherName].InnerText);
+
+
+					if (n.Name == weatherName) {
 						weather = n.InnerText;
+						Debug.Log ("Got weather, it's " + n.InnerText);
+					}
 
-					if (n.Name == "temp_f")
+					if (n.Name == temperatureName) {
 						temp = Convert.ToSingle (n.InnerText);
+					}
 					
 				}
-
-				if (OnCurrentCondReceived != null)
-					OnCurrentCondReceived (weather, temp);
+				Debug.Log ("Got current conditions, " + weather + ", temp is " + temp.ToString ());
+				haveFreshCurrent = true;
 
 			} catch (System.Exception e) {
 				Debug.LogError ("Unknown exception: " + e.Message + " " + e.StackTrace);
 			}
+
+			return doc;
 
 		}
 

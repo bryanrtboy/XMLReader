@@ -23,7 +23,7 @@ public class ParticleController : MonoBehaviour
 
 	public TypeOfWeather m_weather = TypeOfWeather.Clear;
 
-
+	//	public DayNightCycleGradient m_dayNight;
 	public bool m_testMode = false;
 	public ParticleSystem m_snow;
 	public ParticleSystem m_clouds;
@@ -31,21 +31,23 @@ public class ParticleController : MonoBehaviour
 	public ParticleSystem m_rain;
 	public ParticleSystem m_fog;
 
-	public Color m_snowSkyColor = Color.grey;
-	public Color m_clearSkyColor = Color.blue;
-
-
-	Camera m_mainCamera;
+	List<ParticleSystem> m_systems;
 
 	void Awake ()
 	{
+		m_systems = new List<ParticleSystem> ();
+
 		if (m_snow)
-			m_snow.Stop ();
-
+			m_systems.Add (m_snow);
 		if (m_clouds)
-			m_clouds.Stop ();
+			m_systems.Add (m_clouds);
+		if (m_haze)
+			m_systems.Add (m_haze);
+		if (m_rain)
+			m_systems.Add (m_rain);
+		if (m_fog)
+			m_systems.Add (m_fog);
 
-		m_mainCamera = Camera.main;
 	}
 
 	void OnEnable ()
@@ -69,7 +71,7 @@ public class ParticleController : MonoBehaviour
 
 	void HandleCurrentConditions (string s, float f)
 	{
-		Debug.Log ("Temp is " + f.ToString () + ", " + s + " at " + Time.time);
+//		Debug.Log ("Current conditions - temp is " + f.ToString () + ", " + s + " at " + Time.time);
 
 		s = s.ToLower ();
 		if (s.Contains ("blizzard")) {
@@ -98,80 +100,152 @@ public class ParticleController : MonoBehaviour
 
 	void ChangeWeather ()
 	{
+
+		foreach (ParticleSystem ps in m_systems)
+			ps.Stop ();
+
+//		if (m_dayNight) {
+//			m_dayNight.m_isGrey = false;
+//			m_dayNight.fogScale = .01f;
+//		}
+
 		switch (m_weather) {
 		case TypeOfWeather.Blizzard:
 			if (m_snow != null) {
 				//Here we should increase the emmission value of m_snow
 				m_snow.Play ();
-				ParticleSystem ps = Instantiate (m_snow);
-				m_mainCamera.backgroundColor = m_snowSkyColor;
 			} else {
 				Debug.Log ("If we had a snow effect, we'd play it.");
 			}
+
+//			if (m_dayNight) {
+//				m_dayNight.m_isGrey = true;
+//				m_dayNight.fogScale = .1f;
+//			}
+
 			break;
 		case TypeOfWeather.Clear:
-			m_mainCamera.backgroundColor = m_clearSkyColor;
 			//Don't play any particles
 			break;
 		case TypeOfWeather.Flurries:
 			if (m_snow != null) {
 				//Change the snow emmissions to burst, or slower than snow
-				m_snow.Play ();
-				m_mainCamera.backgroundColor = Color.Lerp (m_snowSkyColor, m_clearSkyColor, .5f);
+				SetParticles (m_snow, 500f);
 			} else {
 				Debug.Log ("If we had a snow effect, we'd play it.");
 			}
+
+			if (m_haze != null)
+				SetParticles (m_haze, 5f);
+
+//			if (m_dayNight) {
+//				m_dayNight.m_isGrey = true;
+//				m_dayNight.fogScale = .1f;
+//			}
+
 			break;
 		case TypeOfWeather.Fog:
-			m_mainCamera.backgroundColor = m_snowSkyColor;
 			if (m_fog != null) {
 				m_fog.Play ();
 			} else {
 				Debug.Log ("If we had a fog effect, we'd play it.");
 			}
+
+			if (m_haze != null)
+				SetParticles (m_haze, 5f);
+
+//			if (m_dayNight) {
+//				m_dayNight.m_isGrey = true;
+//				m_dayNight.fogScale = .1f;
+//			}
+
 			break;
 		case TypeOfWeather.MostlyCloudy:
-			m_mainCamera.backgroundColor = m_clearSkyColor;
 			if (m_clouds != null) {
 				//change the cloud count to be higher than when partly cloudy
-				m_clouds.Play ();
+				Vector3 pos = new Vector3 (m_clouds.transform.position.x, 3, m_clouds.transform.position.z);
+				Vector3 shape = new Vector3 (4, 10, 15);
+				//setup and play the particles
+				SetParticles (m_clouds, 10f, pos, shape);
+
 			} else {
 				Debug.Log ("If we had a cloud effect, we'd play it.");
 			}
+
+			if (m_haze != null)
+				SetParticles (m_haze, 5f);
+
 			break;
 		case TypeOfWeather.Overcast:
-
-			m_mainCamera.backgroundColor = m_snowSkyColor;
-
 			if (m_haze != null) {
-				m_haze.Play ();
+				SetParticles (m_haze, 10f);
 			} else {
 				Debug.Log ("If we had a overcast effect, we'd play it.");
 			}
+
+//			if (m_dayNight) {
+//				m_dayNight.m_isGrey = true;
+//				m_dayNight.fogScale = .01f;
+//			}
 			break;
 		case TypeOfWeather.PartlyCloudy:
-			m_mainCamera.backgroundColor = m_clearSkyColor;
 			if (m_clouds != null) {
+				Vector3 pos = new Vector3 (m_clouds.transform.position.x, -2.25f, m_clouds.transform.position.z);
+				Vector3 shape = new Vector3 (15, 3, 15);
+				SetParticles (m_clouds, 1f, pos, shape);
 				m_clouds.Play ();
 			} else {
 				Debug.Log ("If we had a cloud effect, we'd play it.");
 			}
+
+			if (m_haze != null)
+				SetParticles (m_haze, 5f);
+
 			break;
 		case TypeOfWeather.Snow:
-
-			m_mainCamera.backgroundColor = m_snowSkyColor;
-
 			if (m_snow != null) {
-				m_snow.Play ();
+				SetParticles (m_snow, 1000f);
 			} else {
 				Debug.Log ("If we had a snow effect, we'd play it.");
 			}
+
+			if (m_haze != null)
+				SetParticles (m_haze, 5f);
+
+			if (m_clouds != null) {
+				//change the cloud count to be higher than when partly cloudy
+				Vector3 pos = new Vector3 (m_clouds.transform.position.x, 3, m_clouds.transform.position.z);
+				Vector3 shape = new Vector3 (4, 10, 15);
+				//setup and play the particles
+				SetParticles (m_clouds, 10f, pos, shape);
+
+			}
+
+//			if (m_dayNight) {
+//				m_dayNight.m_isGrey = true;
+//				m_dayNight.fogScale = .1f;
+//			}
+//
 			break;
 		default :
 		//Don't play any particles by default
-			m_mainCamera.backgroundColor = m_clearSkyColor;
 			break;
 		}
+	}
+
+	void SetParticles (ParticleSystem ps, float rateMultiplier, Vector3 _position = default( Vector3), Vector3 _shape = default(Vector3))
+	{
+		if (_position != Vector3.zero)
+			ps.transform.position = _position;
+
+		var em = ps.emission;
+		em.rateOverTimeMultiplier = rateMultiplier;
+
+		if (_shape != Vector3.zero) {
+			var shape = ps.shape;
+			shape.box = _shape;
+		}
+		ps.Play ();
 	}
 
 	void HandleForecast (string s, float f)
