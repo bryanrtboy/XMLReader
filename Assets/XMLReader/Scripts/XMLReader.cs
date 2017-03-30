@@ -25,7 +25,6 @@ namespace SimpleXML
 		public event Action<string,float> OnCurrentCondReceived;
 		public event Action<string,float> OnForecastReceived;
 
-		public float updateForecastRate = 3600;
 		public float updateCurrentConditionsRate = 120;
 
 		//other feeds to test -  http://feeds.foxnews.com/foxnews/national
@@ -55,7 +54,9 @@ namespace SimpleXML
 
 		void Update ()
 		{
-<<<<<<< Updated upstream
+			if (InternetChecker.instance == null)
+				return;
+
 			if (gotNewForecastData) {
 				gotNewForecastData = false;
 
@@ -77,27 +78,37 @@ namespace SimpleXML
 		{
 			while (runThread) {
 				if (grabForecast) {
-					grabForecast = false;
-					GetTempAndConditions (m_forecastURL, "weather-summary", "maximum");
-				}
-=======
-			if (!InternetChecker.instance.m_hasInternet)
-				return;
+					
+					if (InternetChecker.instance.m_hasInternet)
+						GetTempAndConditions (m_forecastURL, "weather-summary", "maximum");
+					else
+						Debug.LogWarning ("No connection, not checking the forecast at " + System.DateTime.Now);
 
-			if (haveFreshData) { //Don't do anything unless the thread has refreshed the data
-				haveFreshData = false; //then we only run once
->>>>>>> Stashed changes
+					grabForecast = false;
+				} 
 
 				if (grabCurrentConditions) {
-					grabCurrentConditions = false;
-					GetTempAndConditions (m_currentWeatherURL, "weather", "temp_f");
+					
+					if (InternetChecker.instance.m_hasInternet)
+						GetTempAndConditions (m_currentWeatherURL, "weather", "temp_f");
+					else
+						Debug.LogWarning ("No connection, not checking current conditions at " + System.DateTime.Now);
 
-				}
+					grabCurrentConditions = false;
+				} 
 			}
 		}
 
 		void StartThread ()
 		{
+
+			if (InternetChecker.instance == null) {
+				Debug.LogError ("There is no instance of an Internet checker in the scene, I don't trust that we have internet, not starting the thread. Please put a game object"
+				+ " in the scene with the InternetCheck script attatched.");
+				Destroy (this);
+				return;
+			}
+
 			m_thread = new Thread (ThreadUpdate); //starting the thread that reads forecasts, since it is a lot of text and slow to read in...
 			m_thread.Start (); //Thread runs all the time, but only does anything when updateThread = true;
 
@@ -113,6 +124,10 @@ namespace SimpleXML
 		void EndThreads ()
 		{
 			runThread = false;
+
+			if (m_thread == null)
+				return;
+
 			//you could use thread.abort() but that has issues on iOS
 			while (m_thread.IsAlive) {
 				//simply have main loop wait till thread ends
@@ -122,20 +137,12 @@ namespace SimpleXML
 
 		void StartGettingInfo ()
 		{
-<<<<<<< Updated upstream
 			if (!m_thread.IsAlive) {
 				Debug.LogError ("No weather for you!");
 				return;
-=======
-			while (runThread && InternetChecker.instance.m_hasInternet) {
-				if (updateThread) {
-					updateThread = false;
-					FetchForecastXDocument (m_forecastURL);
-				}
->>>>>>> Stashed changes
 			}
 
-			InvokeRepeating ("GetCurrentConditions", 10, updateCurrentConditionsRate);//this runs on the main thread, which is fine since this feed is fast
+			InvokeRepeating ("GetCurrentConditions", 10, updateCurrentConditionsRate);
 			Invoke ("GetForecast", 4); //forecast only updates once.
 
 		}
@@ -147,34 +154,21 @@ namespace SimpleXML
 
 		void GetCurrentConditions ()
 		{
-<<<<<<< Updated upstream
 			grabCurrentConditions = true; //Set flag so the thread runs the function 
-=======
-			XDocument doc = new XDocument ();
-
-			HttpWebRequest request = (HttpWebRequest)WebRequest.Create (xmlURL);
-
-			request.Method = "GET";
-			request.ContentType = "application/x-www-form-urlencoded";
-			request.UserAgent = m_userAgent;
-			request.Accept = "Accept=text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
-
-			HttpWebResponse response = (HttpWebResponse)request.GetResponse ();
-			Stream resStream = response.GetResponseStream ();
-
-			doc = XDocument.Load (resStream);
-
-			return doc;
->>>>>>> Stashed changes
 		}
 
 		XmlDocument GetTempAndConditions (string xmlURL, string weatherName, string temperatureName)
 		{
-			XmlDocument doc = GetXMLDocument (xmlURL);
+
+			XmlDocument doc = new XmlDocument ();
+
+			if (InternetChecker.instance.m_hasInternet)
+				doc = GetXMLDocument (xmlURL);
+			else
+				return doc;
 
 			temp = -100f;
 			weather = "";
-			bool isCurrentData = false;
 
 			try {
 
@@ -225,29 +219,25 @@ namespace SimpleXML
 									}
 								}
 							}
-
-							gotNewForecastData = true; //We seem to have parameters, we must have the forecast XML
 						}
-
-
-					}
+					} 
 						
 					//If we are using the simple XML, just get the damn information directly
 					if (root.Name == weatherName) {
 						weather = root.InnerText;
-						isCurrentData = true;
 					}
 
 					if (root.Name == temperatureName) {
 						temp = Convert.ToSingle (root.InnerText);
-						isCurrentData = true;
 					}
+
+					if (grabForecast && forecastTemp > -99f)
+						gotNewForecastData = true;
+
+					if (grabCurrentConditions && temp > -99f)
+						gotNewCurrentData = true;
 					
 				}
-
-				//All is well, we have new data
-				if (isCurrentData)
-					gotNewCurrentData = true;
 
 			} catch (System.Exception e) {
 				Debug.LogError ("Unknown exception: " + e.Message + " " + e.StackTrace);

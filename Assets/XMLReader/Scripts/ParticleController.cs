@@ -114,15 +114,11 @@ public class ParticleController : MonoBehaviour
 			if (m_snow != null) {
 				//Here we should increase the emmission value of m_snow
 				m_snow.Play ();
-<<<<<<< Updated upstream
-=======
-				//ParticleSystem ps = Instantiate (m_snow);
-				m_mainCamera.backgroundColor = m_snowSkyColor;
->>>>>>> Stashed changes
 			} else {
 				Debug.Log ("If we had a snow effect, we'd play it.");
 			}
 
+			Camera.main.backgroundColor = Color.gray;
 //			if (m_dayNight) {
 //				m_dayNight.m_isGrey = true;
 //				m_dayNight.fogScale = .1f;
@@ -142,6 +138,8 @@ public class ParticleController : MonoBehaviour
 
 			if (m_haze != null)
 				SetParticles (m_haze, 5f);
+
+			Camera.main.backgroundColor = Color.gray;
 
 //			if (m_dayNight) {
 //				m_dayNight.m_isGrey = true;
@@ -226,6 +224,7 @@ public class ParticleController : MonoBehaviour
 
 			}
 
+			Camera.main.backgroundColor = Color.gray;
 //			if (m_dayNight) {
 //				m_dayNight.m_isGrey = true;
 //				m_dayNight.fogScale = .1f;
@@ -255,6 +254,6 @@ public class ParticleController : MonoBehaviour
 
 	void HandleForecast (string s, float f)
 	{
-		Debug.Log ("Forecast is " + f.ToString () + ", " + s + " at " + Time.time);
+		Debug.Log ("Particles got the Forecast at " + f.ToString () + ", " + s + " at " + Time.time);
 	}
 }

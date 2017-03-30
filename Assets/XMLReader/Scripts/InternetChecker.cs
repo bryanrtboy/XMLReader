@@ -9,7 +9,7 @@ public class InternetChecker : MonoBehaviour
 	public bool m_hasInternet = false;
 	//poll this from other scripts before assuming you have a live connection
 
-	public bool m_autoRecheck = false;
+	//We need to recheck the internet connection, so the data here is always fresh
 	public float m_autoRecheckRate = 10f;
 
 	private const bool m_allowCarrierDataNetwork = false;
@@ -37,23 +37,25 @@ public class InternetChecker : MonoBehaviour
 	{
 		StartInternetUpdate ();
 
-		if (m_autoRecheck)
-			InvokeRepeating ("StartInternetUpdate", m_autoRecheckRate * 2f, m_autoRecheckRate); //Start re-checking after a delay for the first check to run...
+		InvokeRepeating ("StartInternetUpdate", m_autoRecheckRate * 2f, m_autoRecheckRate); //Start re-checking after a delay for the first check to run...
 	}
 
 	void Update ()
 	{
 		if (m_ping != null) {
 			bool stopCheck = true;
+			Debug.Log ("pinging at " + Time.time);
+
 			if (m_ping.isDone) {
 				if (m_ping.time >= 0)
 					InternetAvailable ();
 				else
 					InternetIsNotAvailable ();
-			} else if (Time.time - m_pingStartTime < m_waitingTime)
+			} else if (Time.time - m_pingStartTime < m_waitingTime) {
 				stopCheck = false;
-			else
+			} else {
 				InternetIsNotAvailable ();
+			}
 			if (stopCheck)
 				m_ping = null;
 		}
