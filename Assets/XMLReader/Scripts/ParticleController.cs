@@ -114,6 +114,11 @@ public class ParticleController : MonoBehaviour
 			if (m_snow != null) {
 				//Here we should increase the emmission value of m_snow
 				m_snow.Play ();
+<<<<<<< Updated upstream
+=======
+				//ParticleSystem ps = Instantiate (m_snow);
+				m_mainCamera.backgroundColor = m_snowSkyColor;
+>>>>>>> Stashed changes
 			} else {
 				Debug.Log ("If we had a snow effect, we'd play it.");
 			}

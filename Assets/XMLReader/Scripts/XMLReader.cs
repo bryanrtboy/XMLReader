@@ -55,6 +55,7 @@ namespace SimpleXML
 
 		void Update ()
 		{
+<<<<<<< Updated upstream
 			if (gotNewForecastData) {
 				gotNewForecastData = false;
 
@@ -79,6 +80,13 @@ namespace SimpleXML
 					grabForecast = false;
 					GetTempAndConditions (m_forecastURL, "weather-summary", "maximum");
 				}
+=======
+			if (!InternetChecker.instance.m_hasInternet)
+				return;
+
+			if (haveFreshData) { //Don't do anything unless the thread has refreshed the data
+				haveFreshData = false; //then we only run once
+>>>>>>> Stashed changes
 
 				if (grabCurrentConditions) {
 					grabCurrentConditions = false;
@@ -114,9 +122,17 @@ namespace SimpleXML
 
 		void StartGettingInfo ()
 		{
+<<<<<<< Updated upstream
 			if (!m_thread.IsAlive) {
 				Debug.LogError ("No weather for you!");
 				return;
+=======
+			while (runThread && InternetChecker.instance.m_hasInternet) {
+				if (updateThread) {
+					updateThread = false;
+					FetchForecastXDocument (m_forecastURL);
+				}
+>>>>>>> Stashed changes
 			}
 
 			InvokeRepeating ("GetCurrentConditions", 10, updateCurrentConditionsRate);//this runs on the main thread, which is fine since this feed is fast
@@ -131,7 +147,25 @@ namespace SimpleXML
 
 		void GetCurrentConditions ()
 		{
+<<<<<<< Updated upstream
 			grabCurrentConditions = true; //Set flag so the thread runs the function 
+=======
+			XDocument doc = new XDocument ();
+
+			HttpWebRequest request = (HttpWebRequest)WebRequest.Create (xmlURL);
+
+			request.Method = "GET";
+			request.ContentType = "application/x-www-form-urlencoded";
+			request.UserAgent = m_userAgent;
+			request.Accept = "Accept=text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+
+			HttpWebResponse response = (HttpWebResponse)request.GetResponse ();
+			Stream resStream = response.GetResponseStream ();
+
+			doc = XDocument.Load (resStream);
+
+			return doc;
+>>>>>>> Stashed changes
 		}
 
 		XmlDocument GetTempAndConditions (string xmlURL, string weatherName, string temperatureName)
