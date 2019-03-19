@@ -104,14 +104,11 @@ namespace SimpleXML
 
 			if (InternetChecker.instance == null) {
 				Debug.LogError ("There is no instance of an Internet checker in the scene, I don't trust that we have internet, not starting the thread. Please put a game object"
-				+ " in the scene with the InternetCheck script attatched.");
-				Destroy (this);
-				return;
+				+ " in the scene with the InternetCheck script attatched. We will run this on the main thread.");
+			} else {
+				m_thread = new Thread (ThreadUpdate); //starting the thread that reads forecasts, since it is a lot of text and slow to read in...
+				m_thread.Start (); //Thread runs all the time, but only does anything when updateThread = true;
 			}
-
-			m_thread = new Thread (ThreadUpdate); //starting the thread that reads forecasts, since it is a lot of text and slow to read in...
-			m_thread.Start (); //Thread runs all the time, but only does anything when updateThread = true;
-
 			Invoke ("StartGettingInfo", 1);
 
 		}
